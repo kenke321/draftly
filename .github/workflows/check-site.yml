@@ -1,0 +1,23 @@
+name: Verify site accessible from US
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check homepage
+        run: |
+          echo "Testing from: $(curl -s https://ipinfo.io/ip) ($(curl -s https://ipinfo.io/country))"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://draftly-kappa.vercel.app)
+          echo "Homepage HTTP status: $STATUS"
+          [ "$STATUS" = "200" ] && echo "✅ Site is UP" || (echo "❌ Site returned $STATUS" && exit 1)
+
+      - name: Check waitlist API
+        run: |
+          RESP=$(curl -s -X POST https://draftly-kappa.vercel.app/api/waitlist \
+            -H "Content-Type: application/json" \
+            -d '{"email":"github-actions-test@example.com"}')
+          echo "API response: $RESP"
+          echo "$RESP" | grep -q '"ok":true' && echo "✅ API is working" || echo "⚠️ API response unexpected"
