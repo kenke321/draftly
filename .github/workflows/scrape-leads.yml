@@ -3,6 +3,9 @@ name: Scrape photographer emails (US server)
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
@@ -28,20 +31,25 @@ jobs:
         timeout-minutes: 25
 
       - name: Show results
+        if: always()
         run: |
           echo "=== Results ==="
-          cat scripts/photographers.json | python3 -c "
-          import json, sys
-          data = json.load(sys.stdin)
-          print(f'Total leads: {len(data)}')
-          for p in data:
-              print(f'  {p[\"city\"]}: {p[\"email\"]}')
+          python3 -c "
+          import json
+          try:
+              data = json.load(open('scripts/photographers.json'))
+              print(f'Total leads: {len(data)}')
+              for p in data:
+                  print(f'  {p[\"city\"]}: {p[\"name\"]} <{p[\"email\"]}>')
+          except Exception as e:
+              print(f'Error reading: {e}')
           "
 
       - name: Commit results
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add scripts/photographers.json
           git diff --staged --quiet || git commit -m "data: scraped photographer leads [skip ci]"
-          git push
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
