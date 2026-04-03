@@ -16,14 +16,13 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: |
-          cd /home/runner/work/draftly/draftly
-          npm ci
-          npx puppeteer browsers install chrome
+        run: npm ci
+
+      - name: Install Puppeteer browser
+        run: npx puppeteer browsers install chrome
 
       - name: Run scraper
         run: |
-          cd /home/runner/work/draftly/draftly
           echo "[]" > scripts/photographers.json
           node scripts/scrape-photographers.mjs
         timeout-minutes: 25
