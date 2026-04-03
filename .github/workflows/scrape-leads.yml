@@ -1,0 +1,48 @@
+name: Scrape photographer emails (US server)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: |
+          cd /home/runner/work/draftly/draftly
+          npm ci
+          npx puppeteer browsers install chrome
+
+      - name: Run scraper
+        run: |
+          cd /home/runner/work/draftly/draftly
+          echo "[]" > scripts/photographers.json
+          node scripts/scrape-photographers.mjs
+        timeout-minutes: 25
+
+      - name: Show results
+        run: |
+          echo "=== Results ==="
+          cat scripts/photographers.json | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          print(f'Total leads: {len(data)}')
+          for p in data:
+              print(f'  {p[\"city\"]}: {p[\"email\"]}')
+          "
+
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add scripts/photographers.json
+          git diff --staged --quiet || git commit -m "data: scraped photographer leads [skip ci]"
+          git push
